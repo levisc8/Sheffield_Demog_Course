@@ -73,3 +73,6 @@ matplot(log(LeslieAges[1:15, ]),
 matplot(log(LefkovitchAges[1:15, ]),
         type = 'l', 
         main = 'Lefkovitch Matrix')
+
+LeslieOutput$sensitivities
+LeslieOutput$elasticities
