@@ -4,3 +4,6 @@
 .Ruserdata
 *.docx
 Admin
+R/Density_Dependence/*/*.csv
+R/Density_Dependence/*.pdf
+R/Density_Dependence/*.Rapp.history

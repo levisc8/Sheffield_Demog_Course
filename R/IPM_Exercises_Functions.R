@@ -137,54 +137,54 @@ mk_K_ceiling <- function(m, m.par, L, U, U1 = U) {
 #Function to calculate mean and variance in reproductive output for a size z
 
 get_mean_var_Repr <- function(init.z,n.samp) {
-
-# initial population sizes and ages
-z   <- rep(init.z,1000)
-Repr.out <- NULL
-
-repeat {
-
+  
+  # initial population sizes and ages
+  z   <- rep(init.z,1000)
+  Repr.out <- NULL
+  
+  repeat {
+    
     ## calculate population size
     pop.size <- length(z)
-
+    
     ## generate binomial random number for the probability of flowering, where the probability of flowering
     ## depends on your size z, this is a vector of 0's and 1's, you get a 1 if you flower
     Repr <- rbinom(n=pop.size, prob=p_bz(z, m.par.true), size=1)
-
+    
     ## number of plants that flowered
     num.Repr <- sum(Repr)
-
+    
     if(num.Repr>0) {
-    	Seeds <- rpois(num.Repr, m.par.true["p.r"] * b_z(z[Repr==1],m.par.true))
-    	Repr.out <- c(Repr.out,Seeds)
+      Seeds <- rpois(num.Repr, m.par.true["p.r"] * b_z(z[Repr==1],m.par.true))
+      Repr.out <- c(Repr.out,Seeds)
     }
-
+    
     ## generate new recruit sizes
     ## rnorm generated normally distributed random numbers
     Rcsz <- rep(init.z,100)
-
+    
     ## for the non-reproductive plants generate random number for survival
     Surv <- rep(NA, pop.size)
     Surv[Repr==0] <- rbinom(n = pop.size - num.Repr, prob = s_z(z[Repr==0], m.par.true), size = 1)
     num.die <- sum(Surv==0, na.rm=TRUE)
     
     if(num.die>0) Repr.out <- c(Repr.out,rep(0,num.die))
-
+    
     ## index for individuals that did not flower and survived
     i.subset <- which(Repr==0 & Surv==1)
-
+    
     ## let them grow
     E.z1 <- m.par.true["grow.int"]+m.par.true["grow.z"]*z[i.subset]
     z1 <- rnorm(n = pop.size - num.Repr - num.die, mean = E.z1, sd = m.par.true["grow.sd"])
     
     z <- c(Rcsz, z1)
-	 
+    
     if(length(Repr.out)>n.samp) break
-
-}
-
-return(c(mean(Repr.out),var(Repr.out),mean(Repr.out>0),var(Repr.out>0)))
-
+    
+  }
+  
+  return(c(mean(Repr.out),var(Repr.out),mean(Repr.out>0),var(Repr.out>0)))
+  
 }
 
 
