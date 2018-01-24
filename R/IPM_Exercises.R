@@ -7,7 +7,8 @@ rm(list=ls(all=TRUE))
 library(doBy)
 set.seed(53241986)
 
-rm(list=ls(all=TRUE))
+
+source('C:/Users/sl13sise/Dropbox/MLU/Knight Lab/Sheffield_Demog_Course/R/WD_Paths.R')
 ## Working directory must be set here, so the source()'s below run
 root=ifelse(.Platform$OS.type=="windows","C:/Users/sl13sise","~"); 
 setwd(paste(root,"/Dropbox/ATSC 2018 participant folder/23.1.18/Rees/R code and Data",sep="")); 
@@ -15,6 +16,8 @@ setwd(paste(root,"/Dropbox/ATSC 2018 participant folder/23.1.18/Rees/R code and 
 source("Monocarp Demog Funs.R");
 
 source("Standard Graphical Pars.R");
+
+source('MatrixImage.R')
 
 # Set simulation parameters
 init.pop.size <- 250
@@ -153,9 +156,46 @@ IPM.true <- mk_K(nBigMatrix, m.par.true, -2.65, 4.5)
 
 IPM.est <- mk_K(nBigMatrix, m.par.est, -2.65, 4.5)
 
-Re(eigen(IPM.true$K)$values[1])
+LambdaTrue <- Re(eigen(IPM.true$K)$values[1])
 
-Re(eigen(IPM.est$K)$values[1])
+LambdaEstimated <- Re(eigen(IPM.est$K)$values[1])
+
+LambdaTrue
+LambdaEstimated
+
+
+# Q1: Vary integration steps. Using a for loop to calculate
+# how lambda converges
+
+MeshpSeq <- round(seq(50, 1000, length.out = 25))
+Output <- list(nMeshpts = MeshpSeq,
+               LambdaEst = rep(NA, 25))
+
+
+
+par(mfrow = c(1,1))
+
+for(i in seq_len(25)) {
+  # Iterate over sequence of meshpoint #s
+  nMeshP <- MeshpSeq[i]
+  
+  # Create new IPM
+  IPM.It.est <- mk_K(nMeshP, m.par.est, -2.65, 4.5)
+  
+  Lambda.est <- Re(eigen(IPM.It.est$K)$values[1])
+  Output$LambdaEst[i] <- Lambda.est
+}
+
+Output <- data.frame(Output)
+
+plot(LambdaEst ~ nMeshpts, data = Output,
+     xlab = '# of Meshpoints',
+     ylab = 'Estimated Lambda')
+abline(h = LambdaTrue, col = 'red',
+       lty = 3)
+
+# Looks like the estimated lambdas converge around 250 - 300 meshpts.
+# It really isn't varying very much at all though
 
 fit.pop.growth <- lm(log(pop.size.t)~c(1:yr))
 
@@ -183,6 +223,11 @@ wb.true <- p_bz(meshpts,m.par.true)*w.true
 stable.flowering.dist.true <- wb.true/ sum(wb.true)
 mean.flowering.z.true <- sum(stable.flowering.dist.true*meshpts)
 mean.flowering.z.true
+
+matrix.image(IPM.true$K ^ 0.1, xlab = 'Size (T)', ylab = 'Size (T+1)',
+             do.contour = TRUE, do.legend = TRUE)
+matrix.image(IPM.est$K ^ 0.1, xlab = 'Size (T)', ylab = 'Size (T+1)',
+             do.contour = TRUE, do.legend = TRUE)
 
 set_graph_pars("panel4"); 
 
@@ -221,87 +266,68 @@ add_panel_label("d")
 ## End of code
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# Q2: Refit survival model using a GAM, modify s_z() and recalculate
+# lambda
+
+source('C:/Users/sl13sise/Dropbox/MLU/Knight Lab/Sheffield_Demog_Course/R/IPM_Exercises_Functions.R')
+
+library(mgcv)
+
+NewSurvModel <- gam(Surv ~ s(z), family = binomial(),
+                    data = sim.data)
+
+summary(NewSurvModel)
+
+plot(Surv.mean ~ z.mean, data =surv.ps)
+lines(seq(-3,5, length.out = length(NewSurvModel$fitted.values)),
+      NewSurvModel$fitted.values)
 
 
+NewIPMEst <- mk_K(250, m.par.est, NewSurvModel,
+                  -2.65, 4.5)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+matrix.image(NewIPMEst$K ^ 0.1,
+             main = 'Estimated IPM',
+             xlab = 'size (T)',
+             ylab = 'size (T+1)')
+matrix.image(IPM.true$K ^ 0.1, 
+             main = 'True Data',
+             xlab = 'size (T)',
+             ylab = 'size (T+1)')
 
 # dev.copy2eps(file="~/Repos/ipm_book/c2/figures/OenotheraSim.eps");
 
-#Calculate w and lambda by iteration
+# Q3: Calculate lambda and W by iteration and compare results 
+# to eigen
+meshpts <- IPM.true$meshpts
 
+# calculate bin width
 h <- diff(meshpts)[1]
 
+# assume a uniform distribution of size frequencies
 w <- rep(1/(nBigMatrix*h),nBigMatrix)
 
 
 
 for(i in 1:100){
+
+  # iteratively show that w converges to the dominant
+  # eigenvector
+	w <- NewIPMEst$K %*% w
 	
-	w <- IPM.est$K %*% w
-	
+	# ibid, but with lambda/dominant eigenvalue
 	lambda <- sum(w*h)
 	
+	# normalize and account for integration
 	w <- w/sum(w*h)
 	
 }
 
-cat("lambda by iteration  ",lambda," dominant eigenvalue ",Re(eigen(IPM.est$K)$values[1]))
+cat("lambda by iteration:  ",
+    lambda,
+    " \ndominant eigenvalue: ",
+    Re(eigen(IPM.est$K)$values[1]),
+    '\n')
 
 plot(w/sum(w),stable.z.dist.est)
 abline(0,1,col="red")
