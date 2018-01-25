@@ -46,7 +46,7 @@ ARTRcols=which(substr(names(data),1,4)=="ARTR");
 
 # pull them out 
 ARTRrings = data[,ARTRcols]; 
-View(ARTRrings); 
+# View(ARTRrings); 
 
 ####### compute percent cover in the first 5 rings 
 k=5; ARTR.k = ARTRrings[,1:k]; 
@@ -121,6 +121,7 @@ ARTR.k = 100*ARTR.k/(pi*distances[ARTR.IDX]^2)
 
 AddSpp <- sppList[-c(1)]
 
+rm(i)
 for(Spp in unique(AddSpp)) { 
   
   output <- list(Dist = distances[-1],
@@ -138,7 +139,7 @@ for(Spp in unique(AddSpp)) {
     
     # Select rings based on iterator. convert to % cover
     Spp.k = SppData[ ,1:kEnd]
-    Spp.k = rowSums(Spp.k)''
+    Spp.k = rowSums(Spp.k)
     Spp.k = 100*Spp.k/(pi*distances[i - 1]^2)
     
     # Fit your model!
