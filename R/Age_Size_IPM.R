@@ -120,13 +120,17 @@ names(m_par) <-  sub(pattern = ".",
 
 # Define functions for the IPM
 g_z1z <- function(z, z1, a, m_par) {
-  mu <- m_par['grow_int'] + z * m_par['grow_z'] + a * m_par['grow_a']
+  mu <- m_par['grow_int'] + 
+    z * m_par['grow_z'] + 
+    a * m_par['grow_a']
   out <- dnorm(z1, mean = mu, sd = m_par['grow_sd'])
   return(out) 
 }
 
 s_z <- function(z, a, m_par) {
-  linear_mu <- m_par['surv_int'] + z * m_par['surv_z'] + a * m_par['grow_a']
+  linear_mu <- m_par['surv_int'] + 
+    z * m_par['surv_z'] + 
+    a * m_par['surv_a']
   out <- 1 / (1 + exp(-linear_mu))
   return(out)
 }
@@ -135,20 +139,25 @@ pb_z <- function(z, a, m_par) {
   if(a == 0) {
     out <- 0
   } else {
-    linear_mu <- m_par['repr_int'] + z * m_par['repr_z'] + a * m_par['repr_a']
+    linear_mu <- m_par['repr_int'] + 
+      z * m_par['repr_z'] + 
+      a * m_par['repr_a']
     out <- 1 / (1 + exp(-linear_mu))
   }
   return(out)
 }
 
 pr_z <- function(a, m_par) { 
-  linear_mu <- m_par['recr_int'] + a * m_par['recr_a']
+  linear_mu <- m_par['recr_int'] + 
+    a * m_par['recr_a']
   out <- 1 / (1 + exp(-linear_mu))
   return(out)
 }  
 
 c_z1z <- function(z, z1, a, m_par) { 
-  mu <- m_par['rcsz_int'] + z * m_par['rcsz_z'] + a * m_par['rcsz_a']
+  mu <- m_par['rcsz_int'] + 
+    z * m_par['rcsz_z'] +
+    a * m_par['rcsz_a']
   out <- dnorm(z1, mean = mu, sd = m_par['rcsz_sd'])
   return(out)
 }
@@ -163,9 +172,12 @@ P_z1z <- function(z, z1, a, m_par) {
 }
 
 F_z1z <- function(z, z1, a, m_par) {
-  out <- s_z(z, a, m_par) * pb_z(z, a, m_par) *
-    pr_z(a, m_par) * c_z1z(z, z1, a, m_par)
-  return(out/2)
+  out <- s_z(z, a, m_par) *
+    pb_z(z, a, m_par) *
+    (1/2) * 
+    pr_z(a, m_par) * 
+    c_z1z(z, z1, a, m_par)
+  return(out)
 }
 
 # Create parameters describing each one. Below is my attempt at describing this,
@@ -173,38 +185,38 @@ F_z1z <- function(z, z1, a, m_par) {
 # to compare the two approaches to see how bad I am at doing this on my own
 
 #system.time({
-nMeshP <- 250
-L <- min(data$z) * 0.9
-U <- max(data$z) * 1.1
-MeshPoints <- seq(L, U, length.out = nMeshP)
-BinWidth <- MeshPoints[2] - MeshPoints[1]
-Ages <- seq(0, max(data$a, na.rm = TRUE), by = 1)
-
-PMatList <- list()
-FMatList <- list()
-for(Age in Ages) {
-  GMat <- BinWidth * outer(MeshPoints,
-                           MeshPoints,
-                           FUN = g_z1z,
-                           a = Age,
-                           m_par = m_par)
-  GMat <- GMat / matrix(as.vector(apply(GMat,
-                                        2,
-                                        sum)),
-                        nrow = nMeshP,
-                        ncol = nMeshP,
-                        byrow = TRUE)
-  
-  PMatList[[Age + 1]] <- GMat %*% diag(s_z(MeshPoints,
-                                           a = Age, 
-                                           m_par = m_par))
-  
-  FMatList[[Age + 1]] <- F_z1z(MeshPoints,
-                               MeshPoints,
-                               a = Age,
-                               m_par = m_par)
-  
-}
+# nMeshP <- 200
+# L <- 1.6 #min(data$z) * 0.9
+# U <- 3.7 #max(data$z) * 1.1
+# MeshPoints <- seq(L, U, length.out = nMeshP)
+# BinWidth <- MeshPoints[2] - MeshPoints[1]
+# Ages <- seq(0, 20, by = 1)
+# 
+# PMatList <- list()
+# FMatList <- list()
+# for(Age in Ages) {
+#   GMat <- BinWidth * outer(MeshPoints,
+#                            MeshPoints,
+#                            FUN = g_z1z,
+#                            a = Age,
+#                            m_par = m_par)
+#   GMat <- GMat / matrix(as.vector(apply(GMat,
+#                                         2,
+#                                         sum)),
+#                         nrow = nMeshP,
+#                         ncol = nMeshP,
+#                         byrow = TRUE)
+#   
+#   PMatList[[Age + 1]] <- GMat %*% diag(s_z(MeshPoints,
+#                                            a = Age, 
+#                                            m_par = m_par))
+#   
+#   FMatList[[Age + 1]] <- F_z1z(MeshPoints,
+#                                MeshPoints,
+#                                a = Age,
+#                                m_par = m_par)
+#   
+# }
 #})
 # Now, Dylan's implementation!
 # Calculate the mesh points, mesh width and store with upper/lower 
@@ -240,10 +252,10 @@ mk_age_IPM <- function(i_par, m_par) {
 }
 
 # Create structural parameters
-StructPars <- mk_intpar(250, # Number of meshpoints
-                        min(data$z) * 0.9, # smallest sizes
-                        max(data$z) * 1.1, # largest sizes
-                        M = max(data$a)) # maximum allowable age
+StructPars <- mk_intpar(200, # Number of meshpoints
+                        1.6, # smallest sizes
+                        3.7, # largest sizes
+                        M = 20) # maximum allowable age
 
 init_n0 <- mk_init_nt0(i_par = StructPars)
 
@@ -287,6 +299,23 @@ Lambdas <- list()
 for(i in YearSeq) {
   if(i == 1) {
     New_n0 <- r_iter(init_n0, 
+                     F = IPM_sys$F, 
+                     P = IPM_sys$P)
+    Lambda <- sum(unlist(New_n0)) / sum(unlist(init_n0))
+  } else {
+    New_n0 <- r_iter(New_n0, 
+                     F = IPM_sys$F, 
+                     P = IPM_sys$P)
+    Lambda <- sum(unlist(New_n0)) / sum(unlist(Output[[i-1]]))
+  }  
+  Output[[i]] <- New_n0
+  Lambdas[[i]] <- Lambda
+
+}
+
+for(i in YearSeq) {
+  if(i == 1) {
+    New_n0 <- r_iter(init_n0, 
                      F = IpmKernels$F, 
                      P = IpmKernels$P)
     Lambda <- sum(unlist(New_n0)) / sum(unlist(init_n0))
@@ -299,7 +328,7 @@ for(i in YearSeq) {
   Output[[i]] <- New_n0
   Lambdas[[i]] <- Lambda
   
-  cat('lambda: ', Lambda, '\n')
 }
 
+Lambdas[[100]]
 
